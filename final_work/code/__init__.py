@@ -2,16 +2,40 @@ import os
 import networkx as nx
 import matplotlib.pyplot as plt
 
-def visualizar_grafo(G, titulo="Visualização do Grafo"):
+def load_graphs_from_graph6_file(path):
     """
-    Função para visualizar um grafo usando NetworkX e Matplotlib.
+    Reads a .g6 file that can contain one or more graphs (one per line).
+    Returns a list of NetworkX graphs.
+    """
+    graphs = []
+    with open(path, "rb") as f:
+        for raw in f:
+            line = raw.strip()
+            if not line:
+                continue
+            # Ignores optional ">>graph6<<" header if it appears
+            if line == b">>graph6<<":
+                continue
+            # Graph6 typically starts without ":"; Sparse6 starts with ":".
+            if line.startswith(b":"):
+                # Sparse6 line
+                G = nx.from_sparse6_bytes(line)
+            else:
+                # Graph6 line
+                G = nx.from_graph6_bytes(line)
+            graphs.append(G)
+    return graphs
+
+def visualize_graph(G, title="Graph Visualization"):
+    """
+    Function to visualize a graph using NetworkX and Matplotlib.
     
-    Parâmetros:
-    - G: grafo do NetworkX
-    - titulo: título exibido na figura
+    Parameters:
+    - G: NetworkX graph
+    - title: title displayed in the figure
     """
-    plt.figure(figsize=(6,6))
-    pos = nx.spring_layout(G, seed=42)  # layout para posicionar os nós
+    plt.figure(figsize=(6, 6))
+    pos = nx.spring_layout(G, seed=42)  # layout to position the nodes
     
     nx.draw(
         G, pos,
@@ -23,31 +47,35 @@ def visualizar_grafo(G, titulo="Visualização do Grafo"):
         edge_color="gray"
     )
     
-    plt.title(titulo, fontsize=14)
+    plt.title(title, fontsize=14)
     plt.show()
 
 def main(folder: str):
-    # Lista para armazenar os grafos lidos
-    grafos = {}
+    # Dictionary to store the loaded graphs
+    graphs = {}
 
-    # Percorre todos os arquivos da foldder
-    for arquivo in os.listdir(folder):
-        if arquivo.endswith(".g6"):
-            caminho_arquivo = os.path.join(folder, arquivo)
+    # Iterates through all files in the folder
+    for file in os.listdir(folder):
+        if file.endswith(".g6"):
+            file_path = os.path.join(folder, file)
             
-            # Lê o grafo no formato Graph6
-            with open(caminho_arquivo, "rb") as f:
-                G = nx.from_graph6_bytes(f.read())
+            try:
+                graph_list = load_graphs_from_graph6_file(file_path)
+                graphs[file] = graph_list
+                
+                # A) Graph visualization
+                for i, G in enumerate(graph_list):
+                    visualize_graph(G, title=f"{file} - graph {i}")
 
-            visualizar_grafo(G, titulo=arquivo)
-            
-            # Armazena no dicionário com o nome do arquivo como chave
-            grafos[arquivo] = G
-            
-    # Exemplo: mostrar os grafos carregados
-    for nome, G in grafos.items():
-        print(f"{nome}: {G.number_of_nodes()} nós, {G.number_of_edges()} arestas")
+            except Exception as e:
+                print(f"Failed to read {file}: {e}")
+
+    # Display the loaded graphs information
+    for name, graph_list in graphs.items():
+        total_nodes = sum(G.number_of_nodes() for G in graph_list)
+        total_edges = sum(G.number_of_edges() for G in graph_list)
+        print(f"{name}: {total_nodes} nodes, {total_edges} edges")
 
 
 if __name__ == "__main__":
-    main(folder="final_work/data_base")
+    main(folder=os.path.join("final_work", "data_base"))
