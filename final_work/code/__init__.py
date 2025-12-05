@@ -50,22 +50,30 @@ def visualize_graph(G, title="Graph Visualization"):
     plt.title(title, fontsize=14)
     plt.show()
 
-def calculate_centralities(G: nx.Graph, centralities: dict):
+def calculate_centralities(G: nx.Graph, measures: dict):
     """
-    Calculates and displays centrality measures for a graph.
-    
-    Parameters:
-    - G: NetworkX graph
-    - centralities: dictionary {name: centrality_function}
+    Apply a set of measures (centralities/connectivities) to a graph.
+    measures: dict {label: function}
     """
-    for name, method in centralities.items():
-        print(f"\n>>> {name} Centrality:")
+    for label, func in measures.items():
         try:
-            values = method(G)  # applies the function to the graph
-            for node, value in values.items():
-                print(f"Node {node}: {value:.4f}")
+            result = func(G)
+            print(f"\n>>> {label}:")
+            
+            # If result is a dict (per-node values)
+            if isinstance(result, dict):
+                for node, value in result.items():
+                    print(f"Node {node}: {value:.4f}")
+                # Calculate and print average value
+                average_value = sum(result.values()) / len(result)
+
+                print(f"Average {label}: {average_value:.4f}")
+            else:
+                # Single numeric value
+                print(f"Value: {result}")
+                
         except Exception as e:
-            print(f"Error calculating {name}: {e}")
+            print(f"Error computing {label}: {e}")
 
 def evaluate_connectivity(G):
     """
@@ -137,7 +145,7 @@ def main(folder: str):
                     evaluate_connectivity(G)
                     #! C2) Algebraic connectivity
                     calculate_centralities(G, dict_connectivity)
-                    
+
             except Exception as e:
                 print(f"Failed to read {file}: {e}")
 
