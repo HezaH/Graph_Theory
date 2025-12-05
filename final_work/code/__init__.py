@@ -50,9 +50,74 @@ def visualize_graph(G, title="Graph Visualization"):
     plt.title(title, fontsize=14)
     plt.show()
 
+def calculate_centralities(G: nx.Graph, centralities: dict):
+    """
+    Calculates and displays centrality measures for a graph.
+    
+    Parameters:
+    - G: NetworkX graph
+    - centralities: dictionary {name: centrality_function}
+    """
+    for name, method in centralities.items():
+        print(f"\n>>> {name} Centrality:")
+        try:
+            values = method(G)  # applies the function to the graph
+            for node, value in values.items():
+                print(f"Node {node}: {value:.4f}")
+        except Exception as e:
+            print(f"Error calculating {name}: {e}")
+
+def evaluate_connectivity(G):
+    """
+    Evaluate basic connectivity measures of a graph.
+    
+    Parameters:
+    - G: NetworkX graph
+    
+    Returns:
+    - dictionary with:
+        * number of connected components
+        * size of the largest connected component
+        * diameter of the graph (largest component)
+    """
+    # Number of connected components
+    num_components = nx.number_connected_components(G)
+    
+    # Largest connected component
+    components = list(nx.connected_components(G))
+    largest_component = max(components, key=len)
+    largest_size = len(largest_component)
+    
+    # Subgraph induced by the largest component
+    largest_subgraph = G.subgraph(largest_component)
+    
+    # Diameter of the largest component
+    diameter = nx.diameter(largest_subgraph)
+    
+    result = {
+        "Number of connected components": num_components,
+        "Size of largest component": largest_size,
+        "Graph diameter": diameter
+    }
+    for key, value in result.items():
+        print(f"{key}: {value}")
+
+
 def main(folder: str):
     # Dictionary to store the loaded graphs
     graphs = {}
+
+    dict_centralities = {
+        "Degree": nx.degree_centrality,
+        "Closeness": nx.closeness_centrality,
+        "Betweenness": nx.betweenness_centrality,
+        "Eigenvector": nx.eigenvector_centrality
+    }
+    dict_connectivity = {
+        "Node Connectivity": nx.node_connectivity,
+        "Edge Connectivity": nx.edge_connectivity,
+        "Algebraic Connectivity": nx.algebraic_connectivity
+    }
 
     # Iterates through all files in the folder
     for file in os.listdir(folder):
@@ -63,10 +128,16 @@ def main(folder: str):
                 graph_list = load_graphs_from_graph6_file(file_path)
                 graphs[file] = graph_list
                 
-                # A) Graph visualization
                 for i, G in enumerate(graph_list):
+                    #! A) Graph visualization
                     visualize_graph(G, title=f"{file} - graph {i}")
-
+                    #! B) Centrality calculations
+                    calculate_centralities(G, dict_centralities)
+                    #! C) Connectivity evaluation
+                    evaluate_connectivity(G)
+                    #! C2) Algebraic connectivity
+                    calculate_centralities(G, dict_connectivity)
+                    
             except Exception as e:
                 print(f"Failed to read {file}: {e}")
 
