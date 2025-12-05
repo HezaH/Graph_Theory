@@ -1,6 +1,7 @@
 import os
 import networkx as nx
 import matplotlib.pyplot as plt
+import statistics
 
 def load_graphs_from_graph6_file(path):
     """
@@ -48,7 +49,7 @@ def visualize_graph(G, title="Graph Visualization"):
     )
     
     plt.title(title, fontsize=14)
-    plt.show()
+    # plt.show()
 
 def calculate_centralities(G: nx.Graph, measures: dict):
     """
@@ -57,17 +58,35 @@ def calculate_centralities(G: nx.Graph, measures: dict):
     """
     for label, func in measures.items():
         try:
-            result = func(G)
+            if label == "Algebraic Connectivity":
+                result = func(G, method="lanczos") #"tracemin"
+            # Some functions require parameters (like Katz centrality)
+            elif label == "Katz Centrality":
+                result = func(G, alpha=0.005, beta=1.0, max_iter=2000)
+            elif label == "PageRank":
+                result = func(G, alpha=0.85)
+            else:
+                result = func(G)
             print(f"\n>>> {label}:")
             
             # If result is a dict (per-node values)
             if isinstance(result, dict):
-                for node, value in result.items():
-                    print(f"Node {node}: {value:.4f}")
-                # Calculate and print average value
-                average_value = sum(result.values()) / len(result)
-
+                # for node, value in result.items():
+                #     print(f"Node {node}: {value:.4f}")
+                
+                # Calculate summary statistics
+                values = list(result.values())
+                average_value = sum(values) / len(values)
+                min_value = min(values)
+                max_value = max(values)
+                std_dev = statistics.pstdev(values)  # desvio padrão populacional
+                
+                # Print results
                 print(f"Average {label}: {average_value:.4f}")
+                print(f"Minimum {label}: {min_value:.4f}")
+                print(f"Maximum {label}: {max_value:.4f}")
+                print(f"Standard Deviation {label}: {std_dev:.4f}")
+
             else:
                 # Single numeric value
                 print(f"Value: {result}")
@@ -107,6 +126,7 @@ def evaluate_connectivity(G):
         "Size of largest component": largest_size,
         "Graph diameter": diameter
     }
+    print("\n>>> Connectivity Measures:")
     for key, value in result.items():
         print(f"{key}: {value}")
 
@@ -116,15 +136,31 @@ def main(folder: str):
     graphs = {}
 
     dict_centralities = {
+        #Standard centrality measures
         "Degree": nx.degree_centrality,
         "Closeness": nx.closeness_centrality,
         "Betweenness": nx.betweenness_centrality,
-        "Eigenvector": nx.eigenvector_centrality
+        "Eigenvector": nx.eigenvector_centrality,
+        
+        # Additional centrality measures
+        "Katz Centrality": nx.katz_centrality,
+        "PageRank": nx.pagerank,
+        "Harmonic Centrality": nx.harmonic_centrality,
+        "Current-flow Betweenness": nx.current_flow_betweenness_centrality
     }
     dict_connectivity = {
+        #Standard connectivity measures
         "Node Connectivity": nx.node_connectivity,
         "Edge Connectivity": nx.edge_connectivity,
-        "Algebraic Connectivity": nx.algebraic_connectivity
+        "Algebraic Connectivity": nx.algebraic_connectivity,
+
+        # Additional connectivity measures
+        "Average Node Connectivity": nx.average_node_connectivity,
+        "Graph Density": nx.density,  # razão entre arestas existentes e possíveis
+        "Average Shortest Path Length": nx.average_shortest_path_length,  # eficiência global
+        "Global Clustering Coefficient": nx.transitivity,  # tendência de formar triângulos
+        "Minimum Node Cut": nx.minimum_node_cut,  # conjunto mínimo de vértices críticos
+        "Minimum Edge Cut": nx.minimum_edge_cut   # conjunto mínimo de arestas críticas
     }
 
     # Iterates through all files in the folder
