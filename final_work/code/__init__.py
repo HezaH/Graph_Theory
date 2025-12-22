@@ -2,6 +2,7 @@ import os
 import networkx as nx
 import matplotlib.pyplot as plt
 import statistics
+import pandas as pd
 
 def load_graphs_from_graph6_file(path):
     """
@@ -27,16 +28,9 @@ def load_graphs_from_graph6_file(path):
             graphs.append(G)
     return graphs
 
-def visualize_graph(G, title="Graph Visualization"):
-    """
-    Function to visualize a graph using NetworkX and Matplotlib.
-    
-    Parameters:
-    - G: NetworkX graph
-    - title: title displayed in the figure
-    """
+def visualize_graph(G, title="Graph Visualization", file_name="graph.png"):
     plt.figure(figsize=(6, 6))
-    pos = nx.spring_layout(G, seed=42)  # layout to position the nodes
+    pos = nx.spring_layout(G, seed=42)
     
     nx.draw(
         G, pos,
@@ -49,9 +43,10 @@ def visualize_graph(G, title="Graph Visualization"):
     )
     
     plt.title(title, fontsize=14)
-    # plt.show()
+    plt.savefig(file_name)   # save instead of show
+    plt.close()              # close the figure so nothing opens
 
-def plot_adjacency_matrix(G: nx.Graph, title: str = "Adjacency Matrix"):
+def plot_adjacency_matrix(G: nx.Graph, title: str = "Adjacency Matrix", file_name="adjacency_matrix.png"):
     """
     Exibe a matriz de adjacência do grafo como um heatmap.
     - Mostra rótulos de nós quando o grafo é pequeno (<= 20 nós).
@@ -82,13 +77,15 @@ def plot_adjacency_matrix(G: nx.Graph, title: str = "Adjacency Matrix"):
 
     plt.colorbar(im, fraction=0.046, pad=0.04)
     plt.tight_layout()
-    plt.show()
+    plt.savefig(file_name)   # save instead of show
+    plt.close()              # close the figure so nothing opens
 
 def calculate_centralities(G: nx.Graph, measures: dict):
     """
     Apply a set of measures (centralities/connectivities) to a graph.
     measures: dict {label: function}
     """
+    results = {}
     for label, func in measures.items():
         try:
             if label == "Algebraic Connectivity":
@@ -112,10 +109,16 @@ def calculate_centralities(G: nx.Graph, measures: dict):
                 std_dev = statistics.pstdev(values)  # desvio padrão populacional
                 
                 # Print results
-                print(f"Average {label}: {average_value:.4f}")
-                print(f"Minimum {label}: {min_value:.4f}")
-                print(f"Maximum {label}: {max_value:.4f}")
-                print(f"Standard Deviation {label}: {std_dev:.4f}")
+                results[label] = {
+                    "Average": average_value,
+                    "Minimum": min_value,
+                    "Maximum": max_value,
+                    "Standard Deviation": std_dev
+                }
+                print(f"Average_{label}: {average_value:.4f}")
+                print(f"Minimum_{label}: {min_value:.4f}")
+                print(f"Maximum_{label}: {max_value:.4f}")
+                print(f"Standard_Deviation_{label}: {std_dev:.4f}")
 
             else:
                 # Single numeric value
@@ -123,6 +126,7 @@ def calculate_centralities(G: nx.Graph, measures: dict):
                 
         except Exception as e:
             print(f"Error computing {label}: {e}")
+    return results
 
 def evaluate_connectivity(G):
     """
@@ -159,6 +163,7 @@ def evaluate_connectivity(G):
     print("\n>>> Connectivity Measures:")
     for key, value in result.items():
         print(f"{key}: {value}")
+    return result
 
 def main(folder: str):
     # Dictionary to store the loaded graphs
@@ -191,6 +196,7 @@ def main(folder: str):
         "Minimum Node Cut": nx.minimum_node_cut,  # conjunto mínimo de vértices críticos
         "Minimum Edge Cut": nx.minimum_edge_cut   # conjunto mínimo de arestas críticas
     }
+    results_df = pd.DataFrame()
 
     # Iterates through all files in the folder
     for file in os.listdir(folder):
@@ -203,15 +209,26 @@ def main(folder: str):
                 
                 for i, G in enumerate(graph_list):
                     #! A) Graph visualization
-                    visualize_graph(G, title=f"{file} - graph {i}")
-                    #! A2) adjancence matriz
-                    plot_adjacency_matrix(G, title=f"Adjacency Matrix - {file} - graph {i}")
+                    visualize_graph(G, title=f"{file} - graph {i}", file_name=f"graph_{file}_graph_{i}.png")
+                    #! A2) Adjacency matrix
+                    plot_adjacency_matrix(G, title=f"Adjacency Matrix - {file} - graph {i}", file_name=f"adjacency_{file}_graph_{i}.png")
                     #! B) Centrality calculations
-                    calculate_centralities(G, dict_centralities)
+                    results_centralities = calculate_centralities(G, dict_centralities)
                     #! C) Connectivity evaluation
-                    evaluate_connectivity(G)
+                    dict_evaluate = evaluate_connectivity(G)
                     #! C2) Algebraic connectivity
-                    calculate_centralities(G, dict_connectivity)
+                    results_connectivity = calculate_centralities(G, dict_connectivity)
+
+                    new_row = {
+                        "File": file,
+                        "Graph_Index": i,
+                        "Num_Nodes": G.number_of_nodes(),
+                        "Num_Edges": G.number_of_edges(),
+                        **{f"Centrality_{k}_{stat}": v for k, stats in results_centralities.items() for stat, v in stats.items()},
+                        **{f"Connectivity_{k}_{stat}": v for k, stats in results_connectivity.items() for stat, v in stats.items()},
+                        **{k: v for k, v in dict_evaluate.items()}
+                    }
+                    results_df = pd.concat([results_df, pd.DataFrame([new_row])], ignore_index=True)
 
             except Exception as e:
                 print(f"Failed to read {file}: {e}")
