@@ -51,6 +51,39 @@ def visualize_graph(G, title="Graph Visualization"):
     plt.title(title, fontsize=14)
     # plt.show()
 
+def plot_adjacency_matrix(G: nx.Graph, title: str = "Adjacency Matrix"):
+    """
+    Exibe a matriz de adjacência do grafo como um heatmap.
+    - Mostra rótulos de nós quando o grafo é pequeno (<= 20 nós).
+    - Abre a janela de plot (plt.show()).
+    """
+    # Define ordem estável de nós (tenta ordenar caso comparáveis)
+    nodes = list(G.nodes())
+    try:
+        nodes = sorted(nodes)
+    except Exception:
+        pass
+
+    A = nx.to_numpy_array(G, nodelist=nodes, dtype=float)
+
+    plt.figure(figsize=(6, 6))
+    im = plt.imshow(A, cmap="Blues", interpolation="nearest")
+    plt.title(title, fontsize=14)
+    plt.xlabel("Nodes")
+    plt.ylabel("Nodes")
+
+    n = len(nodes)
+    if n <= 20:
+        plt.xticks(range(n), nodes, rotation=90)
+        plt.yticks(range(n), nodes)
+    else:
+        plt.xticks([])
+        plt.yticks([])
+
+    plt.colorbar(im, fraction=0.046, pad=0.04)
+    plt.tight_layout()
+    plt.show()
+
 def calculate_centralities(G: nx.Graph, measures: dict):
     """
     Apply a set of measures (centralities/connectivities) to a graph.
@@ -71,9 +104,6 @@ def calculate_centralities(G: nx.Graph, measures: dict):
             
             # If result is a dict (per-node values)
             if isinstance(result, dict):
-                # for node, value in result.items():
-                #     print(f"Node {node}: {value:.4f}")
-                
                 # Calculate summary statistics
                 values = list(result.values())
                 average_value = sum(values) / len(values)
@@ -130,7 +160,6 @@ def evaluate_connectivity(G):
     for key, value in result.items():
         print(f"{key}: {value}")
 
-
 def main(folder: str):
     # Dictionary to store the loaded graphs
     graphs = {}
@@ -167,7 +196,7 @@ def main(folder: str):
     for file in os.listdir(folder):
         if file.endswith(".g6"):
             file_path = os.path.join(folder, file)
-            
+            print(f"\nProcessing file: {file}")
             try:
                 graph_list = load_graphs_from_graph6_file(file_path)
                 graphs[file] = graph_list
@@ -175,6 +204,8 @@ def main(folder: str):
                 for i, G in enumerate(graph_list):
                     #! A) Graph visualization
                     visualize_graph(G, title=f"{file} - graph {i}")
+                    #! A2) adjancence matriz
+                    plot_adjacency_matrix(G, title=f"Adjacency Matrix - {file} - graph {i}")
                     #! B) Centrality calculations
                     calculate_centralities(G, dict_centralities)
                     #! C) Connectivity evaluation
@@ -185,12 +216,13 @@ def main(folder: str):
             except Exception as e:
                 print(f"Failed to read {file}: {e}")
 
+            print(f"\n>>> Finished processing {file}.")
+
     # Display the loaded graphs information
     for name, graph_list in graphs.items():
         total_nodes = sum(G.number_of_nodes() for G in graph_list)
         total_edges = sum(G.number_of_edges() for G in graph_list)
         print(f"{name}: {total_nodes} nodes, {total_edges} edges")
-
 
 if __name__ == "__main__":
     main(folder=os.path.join("final_work", "data_base"))
