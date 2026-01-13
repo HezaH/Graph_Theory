@@ -123,6 +123,7 @@ def calculate_centralities(G: nx.Graph, measures: dict):
             else:
                 # Single numeric value
                 print(f"Value: {result}")
+                results[label] = result
                 
         except Exception as e:
             print(f"Error computing {label}: {e}")
@@ -213,9 +214,9 @@ def main(folder: str):
                     #! A2) Adjacency matrix
                     plot_adjacency_matrix(G, title=f"Adjacency Matrix - {file} - graph {i}", file_name=f"adjacency_{file}_graph_{i}.png")
                     #! B) Centrality calculations
-                    results_centralities = calculate_centralities(G, dict_centralities)
+                    # results_centralities = calculate_centralities(G, dict_centralities)
                     #! C) Connectivity evaluation
-                    dict_evaluate = evaluate_connectivity(G)
+                    # dict_evaluate = evaluate_connectivity(G)
                     #! C2) Algebraic connectivity
                     results_connectivity = calculate_centralities(G, dict_connectivity)
 
